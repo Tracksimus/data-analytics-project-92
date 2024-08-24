@@ -1,5 +1,4 @@
---Данный запрос считает общее количество покупателей из 
-таблицы customers, колонку назвал customers_count
+--Данный запрос считает общее количество покупателей из таблицы customers, колонку назвал customers_count
 SELECT COUNT(customer_id) AS customers_count
 FROM customers;
 
