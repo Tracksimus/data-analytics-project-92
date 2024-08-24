@@ -42,25 +42,25 @@ ORDER BY average_income;
 WITH tab AS (
     SELECT
         (
-            first_name
+            e.first_name
             || ' '
-            || last_name
+            || e.last_name
         ) AS seller,
-        Floor(Sum(quantity * price)) AS income,
-        To_char(sale_date, 'Day') AS day_of_week,
-        Extract(ISODOW FROM sale_date) AS dow
+        Floor(Sum(s.quantity * s.price)) AS income,
+        To_char(s.sale_date, 'Day') AS day_of_week,
+        Extract(ISODOW FROM s.sale_date) AS dow
     FROM employees AS e
     INNER JOIN sales AS s
         ON e.employee_id = s.sales_person_id
     LEFT JOIN products AS p
         ON s.product_id = p.product_id
     GROUP BY (
-        first_name
+        e.first_name
         || ' '
-        || last_name
+        || e.last_name
     ),
-    To_char(sale_date, 'Day'),
-    Extract(ISODOW FROM sale_date)
+    To_char(s.sale_date, 'Day'),
+    Extract(ISODOW FROM s.sale_date)
 )
 
 SELECT
@@ -91,18 +91,18 @@ ORDER BY age_category;
 --Данные по количеству уникальных покупателей и выручке, которую они принесли.
 WITH tab AS (
     SELECT
-        customer_id,
-        To_char(sale_date, 'YYYY-MM') AS selling_month,
-        Sum(quantity * price) AS income
-    FROM employees
+        s.customer_id,
+        To_char(s.sale_date, 'YYYY-MM') AS selling_month,
+        Sum(s.quantity * p.price) AS income
+    FROM employees AS e
     LEFT JOIN sales AS s
-        ON employee_id = s.sales_person_id
+        ON e.employee_id = s.sales_person_id
     LEFT JOIN products AS p
         ON s.product_id = p.product_id
-    WHERE To_char(sale_date, 'YYYY-MM') IS NOT NULL
+    WHERE To_char(s.sale_date, 'YYYY-MM') IS NOT NULL
     GROUP BY
-        To_char(sale_date, 'YYYY-MM'),
-        customer_id
+        To_char(s.sale_date, 'YYYY-MM'),
+        s.customer_id
 )
 
 SELECT
@@ -121,8 +121,8 @@ WITH tab AS (
             || ' '
             || c.last_name
         ) AS customer,
-        Min(sale_date) AS sale_date,
-        Sum(price * quantity)
+        Min(s.sale_date) AS sale_date,
+        Sum(p.price * s.quantity)
     FROM customers AS c
     LEFT JOIN sales AS s
         ON c.customer_id = s.customer_id
@@ -133,7 +133,7 @@ WITH tab AS (
         || ' '
         || c.last_name
     )
-    HAVING Sum(price * quantity) = 0
+    HAVING Sum(p.price * s.quantity) = 0
 ),
 
 tab2 AS (
@@ -143,7 +143,7 @@ tab2 AS (
             || ' '
             || c.last_name
         ) AS customer,
-        Min(sale_date) AS sale_date,
+        Min(s.sale_date) AS sale_date,
         (
             e.first_name
             || ' '
