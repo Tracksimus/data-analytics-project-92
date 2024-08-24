@@ -1,133 +1,145 @@
 --общее количество покупателей из таблицы customers.
-SELECT COUNT(customer_id) AS customers_count
-FROM customers;
+SELECT Count(customer_id) AS customers_count
+FROM   customers;
 
 --10-ка лучших продавцов
-select
-    concat(employees.first_name, ' ', employees.last_name) as seller,
-    count(sales.sales_id) as operations,
-    floor(sum(products.price * sales.quantity)) as income
-from sales
-inner join employees on sales.sales_person_id = employees.employee_id
-inner join products on sales.product_id = products.product_id
-group by seller
-order by income desc
-limit 10;
+SELECT     Concat(employees.first_name, ' ', employees.last_name) AS seller,
+           Count(sales.sales_id)                                  AS operations,
+           Floor(Sum(products.price * sales.quantity))            AS income
+FROM       sales
+INNER JOIN employees
+ON         sales.sales_person_id = employees.employee_id
+INNER JOIN products
+ON         sales.product_id = products.product_id
+GROUP BY   seller
+ORDER BY   income DESC limit 10;
 
 --продавцы, чья средняя выручка меньше средней выручки по всем продавцам.
-select
-    concat(employees.first_name, ' ', employees.last_name) as seller,
-    floor(avg(products.price * sales.quantity)) as average_income
-from sales
-inner join employees on sales.sales_person_id = employees.employee_id
-inner join products on sales.product_id = products.product_id
-group by seller
-having
-    avg(products.price * sales.quantity)
-    < (
-        select avg(products.price * sales.quantity)
-        from sales
-        inner join employees on sales.sales_person_id = employees.employee_id
-        inner join products on sales.product_id = products.product_id
-    )
-order by average_income;
+SELECT     Concat(employees.first_name, ' ', employees.last_name) AS seller,
+           Floor(Avg(products.price * sales.quantity))            AS average_income
+FROM       sales
+INNER JOIN employees
+ON         sales.sales_person_id = employees.employee_id
+INNER JOIN products
+ON         sales.product_id = products.product_id
+GROUP BY   seller
+HAVING     Avg(products.price * sales.quantity) <
+           (
+                      SELECT     Avg(products.price * sales.quantity)
+                      FROM       sales
+                      INNER JOIN employees
+                      ON         sales.sales_person_id = employees.employee_id
+                      INNER JOIN products
+                      ON         sales.product_id = products.product_id )
+ORDER BY   average_income;
 
 --Данный запрос содержит информацию о выручке по дням недели.
-with tab as (
-    select
-        (first_name || ' ' || last_name) as seller,
-        FLOOR(SUM(quantity * price)) as income,
-        TO_CHAR(sale_date, 'Day') as day_of_week,
-        EXTRACT(isodow from sale_date) as dow
-    from employees as e
-    inner join sales as s on e.employee_id = s.sales_person_id
-    left join products as p on s.product_id = p.product_id
-    group by
-        (first_name || ' ' || last_name),
-        TO_CHAR(sale_date, 'Day'),
-        EXTRACT(isodow from sale_date)
-)
-
-select
-    seller,
-    LOWER(day_of_week) as day_of_week,
-    ROUND(income) as income
-from tab
-order by dow, seller;
+WITH tab AS
+(
+           SELECT     (first_name
+                                 || ' '
+                                 || last_name)       AS seller,
+                      Floor(Sum(quantity * price))   AS income,
+                      To_char(sale_date, 'Day')      AS day_of_week,
+                      Extract(isodow FROM sale_date) AS dow
+           FROM       employees                      AS e
+           INNER JOIN sales                          AS s
+           ON         e.employee_id = s.sales_person_id
+           LEFT JOIN  products AS p
+           ON         s.product_id = p.product_id
+           GROUP BY   (first_name
+                                 || ' '
+                                 || last_name),
+                      To_char(sale_date, 'Day'),
+                      Extract(isodow FROM sale_date) )
+SELECT   seller,
+         Lower(day_of_week) AS day_of_week,
+         Round(income)      AS income
+FROM     tab
+ORDER BY dow,
+         seller;
 
 --Кол-во покупателей в разных возрастных группах: 16-25, 26-40 и 40+.
-with tab as (
-    select
-        case
-            when age between 16 and 25 then '16-25'
-            when age between 26 and 40 then '26-40'
-            when age > 40 then '40+'
-        end as age_category
-    from customers
-)
-
-select
-    age_category,
-    count(age_category) as age_count
-from tab
-group by age_category
-order by age_category;
+WITH tab AS
+(
+       SELECT
+              CASE
+                     WHEN age BETWEEN 16 AND    25 THEN '16-25'
+                     WHEN age BETWEEN 26 AND    40 THEN '26-40'
+                     WHEN age > 40 THEN '40+'
+              END AS age_category
+       FROM   customers )
+SELECT   age_category,
+         Count(age_category) AS age_count
+FROM     tab
+GROUP BY age_category
+ORDER BY age_category;
 
 --Данные по количеству уникальных покупателей и выручке, которую они принесли.
-with tab as (
-    select
-        customer_id,
-        to_char(sale_date, 'YYYY-MM') as selling_month,
-        sum(quantity * price) as income
-    from employees
-    left join sales as s on employee_id = s.sales_person_id
-    left join products as p on s.product_id = p.product_id
-    where to_char(sale_date, 'YYYY-MM') is not null
-    group by to_char(sale_date, 'YYYY-MM'), customer_id
-)
-
-select
-    selling_month,
-    count(customer_id) as total_customers,
-    floor(sum(income)) as income
-from tab
-group by selling_month
-order by selling_month;
+WITH tab AS
+(
+          SELECT    customer_id,
+                    To_char(sale_date, 'YYYY-MM') AS selling_month,
+                    Sum(quantity * price)         AS income
+          FROM      employees
+          LEFT JOIN sales AS s
+          ON        employee_id = s.sales_person_id
+          LEFT JOIN products AS p
+          ON        s.product_id = p.product_id
+          WHERE     To_char(sale_date, 'YYYY-MM') IS NOT NULL
+          GROUP BY  To_char(sale_date, 'YYYY-MM'),
+                    customer_id )
+SELECT   selling_month,
+         Count(customer_id) AS total_customers,
+         Floor(Sum(income)) AS income
+FROM     tab
+GROUP BY selling_month
+ORDER BY selling_month;
 
 --Данные о покупателях, первая покупка которых была в ходе проведения акций.
-with tab as (
-    select
-        (c.first_name || ' ' || c.last_name) as customer,
-        min(sale_date) as sale_date,
-        sum(price * quantity)
-    from customers as c
-    left join sales as s on c.customer_id = s.customer_id
-    left join products as p on s.product_id = p.product_id
-    group by (c.first_name || ' ' || c.last_name)
-    having sum(price * quantity) = 0
-),
-
-tab2 as (
-    select
-        (c.first_name || ' ' || c.last_name) as customer,
-        min(sale_date) as sale_date,
-        (e.first_name || ' ' || e.last_name) as seller
-    from sales as s
-    left join customers as c on s.customer_id = c.customer_id
-    left join employees as e on s.sales_person_id = e.employee_id
-    group by
-        (c.first_name || ' ' || c.last_name),
-        (e.first_name || ' ' || e.last_name)
-)
-
-select
-    tab.customer,
-    tab.sale_date,
-    seller
-from tab
-inner join tab2
-    on
-        tab.customer = tab2.customer
-        and tab.sale_date = tab2.sale_date
-group by tab.customer, tab.sale_date, seller
-order by customer;
+WITH tab AS
+(
+          SELECT    (c.first_name
+                              || ' '
+                              || c.last_name) AS customer,
+                    Min(sale_date)            AS sale_date,
+                    Sum(price * quantity)
+          FROM      customers AS c
+          LEFT JOIN sales     AS s
+          ON        c.customer_id = s.customer_id
+          LEFT JOIN products AS p
+          ON        s.product_id = p.product_id
+          GROUP BY  (c.first_name
+                              || ' '
+                              || c.last_name)
+          HAVING    Sum(price * quantity) = 0 ), tab2 AS
+(
+          SELECT    (c.first_name
+                              || ' '
+                              || c.last_name) AS customer,
+                    Min(sale_date)            AS sale_date,
+                    (e.first_name
+                              || ' '
+                              || e.last_name) AS seller
+          FROM      sales                     AS s
+          LEFT JOIN customers                 AS c
+          ON        s.customer_id = c.customer_id
+          LEFT JOIN employees AS e
+          ON        s.sales_person_id = e.employee_id
+          GROUP BY  (c.first_name
+                              || ' '
+                              || c.last_name),
+                    (e.first_name
+                              || ' '
+                              || e.last_name) )
+SELECT     tab.customer,
+           tab.sale_date,
+           seller
+FROM       tab
+INNER JOIN tab2
+ON         tab.customer = tab2.customer
+AND        tab.sale_date = tab2.sale_date
+GROUP BY   tab.customer,
+           tab.sale_date,
+           seller
+ORDER BY   customer;
