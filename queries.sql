@@ -122,7 +122,7 @@ WITH tab AS (
             || c.last_name
         ) AS customer,
         Min(s.sale_date) AS sale_date,
-        Sum(p.price * s.quantity)
+        Sum(p.price * s.quantity) AS amount
     FROM customers AS c
     LEFT JOIN sales AS s
         ON c.customer_id = s.customer_id
@@ -169,7 +169,7 @@ tab2 AS (
 SELECT
     tab.customer,
     tab.sale_date,
-    seller
+    tab.seller
 FROM tab
 INNER JOIN tab2
     ON
@@ -178,5 +178,5 @@ INNER JOIN tab2
 GROUP BY
     tab.customer,
     tab.sale_date,
-    seller
-ORDER BY customer;
+    tab.seller
+ORDER BY tab.customer;
